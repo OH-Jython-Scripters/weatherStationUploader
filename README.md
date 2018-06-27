@@ -4,8 +4,9 @@ Share your openHAB weather sensors data with the world!  It’s fun, rewarding, 
 [![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 ## About
-This is a simple jsr223 jython script for openHAB to be used together with [Jython scripting for openHAB 2.x](https://github.com/OH-Jython-Scripters/openhab2-jython). **weatherStationUploader** enables personal weather
-station owners to UPLOAD weather data in real time to Weather Underground.
+This is a simple jsr223 jython script for openHAB to be used together with [Jython scripting for openHAB 2.x](https://github.com/OH-Jython-Scripters/openhab2-jython).
+
+**weatherStationUploader** enables personal weather station owners to UPLOAD weather data in real time to Weather Underground. Every openHAB system is different so be prepared to the fact that the [weatherStationUploader.py](https://raw.githubusercontent.com/OH-Jython-Scripters/weatherStationUploader/master/weatherStationUploader.py) script will need your customization.
 
 ## openHAB Jython Scripting on Slack
 OH-Jython-Scripters now has a Slack channel! It will help us to make sense of our work, and drive our efforts in Jython scripting forward. So if you are just curious, got questions, need support or just like to hang around, do not hesitate, join [**openHAB Jython Scripting on Slack**](https://join.slack.com/t/besynnerlig/shared_invite/enQtMzI3NzIyNTAzMjM1LTdmOGRhOTAwMmIwZWQ0MTNiZTU0MTY0MDk3OTVkYmYxYjE4NDE4MjcxMjg1YzAzNTJmZDM3NzJkYWU2ZDkwZmY) <--- Click link!
