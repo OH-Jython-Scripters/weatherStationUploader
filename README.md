@@ -21,7 +21,7 @@ OH-Jython-Scripters now has a Slack channel! It will help us to make sense of ou
 * The [meteocalc library](https://pypi.org/project/meteocalc/) is used for some calculations in the script. It must be installed and accessible from within the openHAB jsr223 environment. There might be other ways but the following was done on a ubuntu installation to achieve that. It might look different on your system.
 
 * `sudo pip install meteocalc`
-* `sudo ln -s /usr/local/lib/python2.7/dist-packages/meteocalc /etc/openhab2/automation/lib/python/meteocalc` (In this example, the directory /etc/openhab2/automation/lib/python is defined as openHAB's python library search path)
+* Now, openHAB jsr223 jython must be configured to find your downloaded python libraries. There are several ways to do this. You can add a -Dpython.path=mypath1:mypath2 to the OH2 script `/etc/default/openhab2`. For example `-Dpython.path=/etc/openhab2/automation/lib/python:/usr/local/lib/python2.7/dist-packages` You can also modify the sys.path list in a Jython script that loads early (like a component script). Or as an alternative you can create a symlink like `sudo ln -s /usr/local/lib/python2.7/dist-packages/meteocalc /etc/openhab2/automation/lib/python/meteocalc` (In this example, the directory /etc/openhab2/automation/lib/python is already defined as openHAB's python library search path)
 * Edit classutils.py, change line 5 to: `PYTHON2 = 2#sys.version_info.major`
 
 ## Installation
