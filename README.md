@@ -10,15 +10,23 @@ station owners to UPLOAD weather data in real time to Weather Underground.
 ## openHAB Jython Scripting on Slack
 OH-Jython-Scripters now has a Slack channel! It will help us to make sense of our work, and drive our efforts in Jython scripting forward. So if you are just curious, got questions, need support or just like to hang around, do not hesitate, join [**openHAB Jython Scripting on Slack**](https://join.slack.com/t/besynnerlig/shared_invite/enQtMzI3NzIyNTAzMjM1LTdmOGRhOTAwMmIwZWQ0MTNiZTU0MTY0MDk3OTVkYmYxYjE4NDE4MjcxMjg1YzAzNTJmZDM3NzJkYWU2ZDkwZmY) <--- Click link!
 
-
-## Installation
-After the prerequisits are met, just download wether_station.py and put it among your other jython scripts. Edit the file so it uses your own credentials and your own sensor names. Remove any sensors in the code that might be irrelevant for your site.
-
 #### Prerequisits
 * [openHAB](https://docs.openhab.org/index.html) version **2.2** or later
 * [Jython scripting for openHAB 2.x](https://github.com/OH-Jython-Scripters/openhab2-jython)
 * [The mylib openHAB jsr223 Jython helper library](https://github.com/OH-Jython-Scripters/mylib)
+* [meteocalc](https://github.com/OH-Jython-Scripters/weatherStationUploader/blob/master/README.md#about#meteocalc%20Installation)
+
+## meteocalc Installation
+* The [meteocalc library](https://pypi.org/project/meteocalc/) is used for some calculations in the script. It must be installed and accessible from within the openHAB jsr223 environment. There might be other ways but the following was done on a ubuntu installation to achieve that. It might look different on your system.
+
+* `sudo pip install meteocalc`
+* `sudo ln -s /usr/local/lib/python2.7/dist-packages/meteocalc meteocalc`
+* Edit classutils.py, change line 5 to: `PYTHON2 = 2#sys.version_info.major`
+
+## Installation
+After the prerequisits are met:
 * Register a new PWS (Personal Weather Station) at [Weather Underground](https://www.wunderground.com/personal-weather-station/signup). Note your station ID and station password.
+* Download [weatherStationUploader.py](https://raw.githubusercontent.com/OH-Jython-Scripters/weatherStationUploader/master/weatherStationUploader.py) and put it among your other jython scripts. Edit and save the file so it uses your own credentials and your own sensor names. Remove any sensors in the code that might be irrelevant for your site. Watch the debug output.
 
 
 ## Disclaimer
