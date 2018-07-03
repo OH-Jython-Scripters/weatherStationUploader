@@ -19,7 +19,7 @@ class WeatherUpload(object):
         ]
     def execute(self, modules, inputs):
 
-        wu_station_id = 'XXXXXXXXXX' # Put your own station ID here
+        wu_station_id = 'XXXX' # Put your own station ID here
         wu_station_key = 'xxxxxxxxx' # Put your station key here
         wu_upload_frequency = 5 # Upload to WU every n minutes
         WU_URL = "http://weatherstation.wunderground.com/weatherstation/updateweatherstation.php"
