@@ -1,15 +1,24 @@
-import os, time
+import os, time, math
 import org.joda.time.DateTime as DateTime
 import org.joda.time.DateTimeZone as DateTimeZone
 from org.joda.time.format import DateTimeFormat
+
+# This project on GitHUB: https://github.com/OH-Jython-Scripters/weatherStationUploader
+#
+# To install and use meteocalc: https://pypi.org/project/meteocalc/
+# sudo pip install meteocalc && sudo ln -s /usr/local/lib/python2.7/dist-packages/meteocalc meteocalc
+# Edit classutils.py, change line 5 to: PYTHON2 = 2#sys.version_info.major
 from meteocalc import Temp, dew_point, heat_index
 
+#from org.eclipse.smarthome.model.persistence.extensions import PersistenceExtensions
 from logging import DEBUG, INFO, WARNING, ERROR
 from openhab.rules import rule, addRule
 from openhab.triggers import CronTrigger
 
 from mylib.utils import getEvent, isActive, getItemValue, getLastUpdate
 wu_loop_count = 1 # Loop counter
+
+import weatherStationConfig as wuconfig
 
 @rule
 class WeatherUpload(object):
@@ -19,12 +28,8 @@ class WeatherUpload(object):
         ]
     def execute(self, modules, inputs):
 
-        wu_station_id = 'XXXX' # Put your own station ID here
-        wu_station_key = 'xxxx' # Put your station key here
-
-        wu_upload_frequency = 5 # Upload to WU every n minutes
+        SCRIPT_VERSION = '1.0'
         WU_URL = "http://weatherstation.wunderground.com/weatherstation/updateweatherstation.php"
-        WEATHER_UPLOAD = True
 
         def ms_to_mph(input_speed):
             # convert input_speed from meter per second to miles per hour
@@ -40,71 +45,146 @@ class WeatherUpload(object):
             # return int(round(float(lux) * 0.01464128843))
             return int(round(float(lux) * 0.015454545))
 
+        def windvec(u, D):
+            '''
+            NEW FUNCTION, Still not in use.
+            Function to calculate the wind vector from time series of wind
+            speed and direction.
+            
+            Parameters:
+                - u: array of wind speeds [m s-1].
+                - D: array of wind directions [degrees from North].
+                
+            Returns:
+                - uv: Vector wind speed [m s-1].
+                - Dv: Vector wind direction [degrees from North].
+                
+            Examples
+            --------
+            
+                >>> u = [3, 7.5, 2.1]
+                >>> D = [340, 356, 2]
+                >>> uv, Dv = windvec(u,D)
+                >>> uv
+                4.162354202836905
+                >>> Dv
+                array([ 353.2118882])
+            '''
+
+            ve = 0.0 # define east component of wind speed
+            vn = 0.0 # define north component of wind speed
+            D = D * math.pi / 180.0 # convert wind direction degrees to radians
+            for i in range(0, len(u)):
+                ve = ve + u[i] * math.sin(D[i]) # calculate sum east speed components
+                vn = vn + u[i] * math.cos(D[i]) # calculate sum north speed components
+            ve = - ve / len(u) # determine average east speed component
+            vn = - vn / len(u) # determine average north speed component
+            uv = math.sqrt(ve * ve + vn * vn) # calculate wind speed vector magnitude
+            # Calculate wind speed vector direction
+            vdir = math.atan2(ve, vn) # ORIGINALLY scipy.arctan2(ve, vn) # Funkar nog...
+            vdir = vdir * 180.0 / math.pi # Convert radians to degrees
+            if vdir < 180:
+                Dv = vdir + 180.0
+            else:
+                if vdir > 180.0:
+                    Dv = vdir - 180
+                else:
+                    Dv = vdir
+            return uv, Dv # uv in m/s, Dv in dgerees from North
+
+
         self.log.setLevel(DEBUG)
         event = getEvent(inputs)
 
-
         global wu_loop_count
-        # TODO: Do some wind data smoothening here, see http://python.hydrology-amsterdam.nl/modules/meteolib.py
 
-        if (WEATHER_UPLOAD and wu_loop_count%wu_upload_frequency == 0):
+        if (wuconfig.stationdata['weather_upload'] and wu_loop_count%wuconfig.stationdata['upload_frequency'] == 0):
             self.log.info('Uploading data to Weather Underground')
 
             sdf = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss")
             dateutc = sdf.print(DateTime.now((DateTimeZone.UTC)))
 
-            t = Temp(getItemValue('YOUR_TEMP_SENSOR_ITEM_NAME', 0.0), 'c') # Outdoor temp, c - celsius, f - fahrenheit, k - kelvin
-            t2 = Temp(getItemValue('YOUR_SOIL_TEMP_SENSOR_ITEM_NAME', 0.0), 'c') # Soil temp, c - celsius, f - fahrenheit, k - kelvin
-            tempf = str(round(t.f, 1))
-            humidity = getItemValue('YOUR_HUM_SENSOR_ITEM_NAME', 0.0)
-            dewptf = str(round(dew_point(temperature=t, humidity=humidity).f, 1)) # calculate Dew Point
-            heatidxf = str(round(heat_index(temperature=t, humidity=humidity).f, 1)) # calculate Heat Index
-            pressure = str(mbar_to_inches_mercury(getItemValue('YOUR_BAR_SENSOR_ITEM_NAME', 0)))
-            soiltempf = str(round(t2.f, 1))
-            soilmoisture = str(int(round(getItemValue('YOUR_PLANT_MOISTURE_SENSOR_ITEM_NAME', 0.0) * 100 / 1023)))
-            winddir = str(getItemValue('YOUR_WIND_DIRECTION_SENSOR_ITEM_NAME', 0))
-            windspeedmph = str(ms_to_mph(getItemValue('YOUR_WIND_SPEED_SENSOR_ITEM_NAME', 0.0)))
-            windgustmph = str(ms_to_mph(getItemValue('YOUR_WIND_GUST_SENSOR_ITEM_NAME', 0.0)))
+            temp = None
+            tempf = None
+            if 'tempc' in wuconfig.sensors:
+                temp = Temp(getItemValue(wuconfig.sensors['tempc'], 0.0), 'c') # Outdoor temp, c - celsius, f - fahrenheit, k - kelvin
+                tempf = str(round(temp.f, 1))
 
-            maxLux = max(getItemValue('YOUR_LUX_SENSOR_ITEM_NAME_1', 0), getItemValue('YOUR_LUX_SENSOR_ITEM_NAME_2', 0))
-            solarradiation = str(lux_to_watts_m2(maxLux))
+            soiltempf = None
+            if 'soiltempc' in wuconfig.sensors:
+                _temp = Temp(getItemValue(wuconfig.sensors['soiltempc'], 0.0), 'c') # Soil temp, c - celsius, f - fahrenheit, k - kelvin
+                soiltempf = str(round(_temp.f, 1))
 
-            #windgustdir = getItemValue('YOUR_WIND_GUST_SENSOR_ITEM_NAME', 0)
-            #windspdmph_avg2m = getItemValue('YOUR_WIND_SPEED_AVG2M_SENSOR_ITEM_NAME', 0.0)
-            #winddir_avg2m = getItemValue('YOUR_WIND_DIR_AVG2M_SENSOR_ITEM_NAME', 0.0)
-            #windgustmph_10m = getItemValue('YOUR_WIND_GUST_AVG10M_SENSOR_ITEM_NAME', 0.0)
-            #windgustdir_10m = getItemValue('YOUR_WIND_DIR_AVG10M_SENSOR_ITEM_NAME', 0.0)
+            humidity = None
+            if 'humidity' in wuconfig.sensors:
+                humidity = getItemValue(wuconfig.sensors['humidity'], 0.0)
+
+            dewptf = None
+            heatidxf = None
+            if 'tempc' in wuconfig.sensors and 'humidity' in wuconfig.sensors:
+                dewptf = str(round(dew_point(temperature=temp, humidity=humidity).f, 1)) # calculate Dew Point
+                heatidxf = str(round(heat_index(temperature=temp, humidity=humidity).f, 1)) # calculate Heat Index
+
+            pressure = None
+            if 'pressurembar' in wuconfig.sensors:
+                pressure = str(mbar_to_inches_mercury(getItemValue(wuconfig.sensors['pressurembar'], 0)))
+
+            soilmoisture = None
+            if 'soilmoisture' in wuconfig.sensors:
+                soilmoisture = str(int(round(getItemValue(wuconfig.sensors['soilmoisture'], 0.0) * 100 / 1023)))
+
+            winddir = None
+            if 'winddir' in wuconfig.sensors:
+                winddir = str(getItemValue(wuconfig.sensors['winddir'], 0))
+
+            windspeedmph = None
+            if 'windspeedms' in wuconfig.sensors:
+                windspeedmph = str(ms_to_mph(getItemValue(wuconfig.sensors['windspeedms'], 0.0)))
+
+            windgustmph = None
+            if 'windgustms' in wuconfig.sensors:
+                windgustmph = str(ms_to_mph(getItemValue(wuconfig.sensors['windgustms'], 0.0)))
+
+            solarradiation = None
+            if 'solarradiation' in wuconfig.sensors:
+                solarradiation = str(getItemValue(wuconfig.sensors['solarradiation'], 0))
+
+            # TODO:
+            #windgustdir = 
+            #windspdmph_avg2m = 
+            #winddir_avg2m = 
+            #windgustmph_10m = 
+            #windgustdir_10m = 
 
             # From http://wiki.wunderground.com/index.php/PWS_-_Upload_Protocol
 
-            # Adjust the command below to use only the sensor data that you have in your system
-
             cmd = 'curl -s -G "' + WU_URL + '" ' \
                 + '--data-urlencode "action=updateraw" ' \
-                + '--data-urlencode "ID='+wu_station_id+'" ' \
-                + '--data-urlencode "PASSWORD='+wu_station_key+'" ' \
+                + '--data-urlencode "ID='+wuconfig.stationdata['station_id']+'" ' \
+                + '--data-urlencode "PASSWORD='+wuconfig.stationdata['station_key']+'" ' \
                 + '--data-urlencode "dateutc='+dateutc+'" ' \
-                + '--data-urlencode "softwaretype=openHAB" ' \
-                + '--data-urlencode "tempf='+tempf+'" ' \
-                + '--data-urlencode "humidity='+str(humidity)+'" ' \
-                + '--data-urlencode "dewptf='+dewptf+'" ' \
-                + '--data-urlencode "heatidxf='+heatidxf+'" ' \
-                + '--data-urlencode "soiltempf='+soiltempf+'" ' \
-                + '--data-urlencode "soilmoisture='+soilmoisture+'" ' \
-                + '--data-urlencode "baromin='+pressure+'" ' \
-                + '--data-urlencode "winddir='+winddir+'" ' \
-                + '--data-urlencode "windspeedmph='+windspeedmph+'" ' \
-                + '--data-urlencode "windgustmph='+windgustmph+'" ' \
-                + '--data-urlencode "solarradiation='+solarradiation+'" ' \
-                + ' > /dev/null'
+                + '--data-urlencode "softwaretype=openHAB" '
+            if tempf is not None: cmd += '--data-urlencode "tempf='+tempf+'" '
+            if humidity is not None: cmd += '--data-urlencode "humidity='+str(humidity)+'" '
+            if dewptf is not None: cmd += '--data-urlencode "dewptf='+dewptf+'" '
+            if heatidxf is not None: cmd += '--data-urlencode "heatidxf='+heatidxf+'" '
+            if soiltempf is not None: cmd += '--data-urlencode "soiltempf='+soiltempf+'" '
+            if soilmoisture is not None: cmd += '--data-urlencode "soilmoisture='+soilmoisture+'" '
+            if pressure is not None: cmd += '--data-urlencode "baromin='+pressure+'" '
+            if winddir is not None: cmd += '--data-urlencode "winddir='+winddir+'" '
+            if windspeedmph is not None: cmd += '--data-urlencode "windspeedmph='+windspeedmph+'" '
+            if windgustmph is not None: cmd += '--data-urlencode "windgustmph='+windgustmph+'" '
+            if solarradiation is not None: cmd += '--data-urlencode "solarradiation='+solarradiation+'" '
+            cmd += ' > /dev/null'
 
+            self.log.debug('WeatherUpload version ' + SCRIPT_VERSION +', performing an upload. (loop count is: ' + str(wu_loop_count) + ')')
             self.log.debug('cmd: ' + cmd)
 
             os.system(cmd)
         else:
-            self.log.debug('Skipping Weather Underground upload. (loop count is: ' + str(wu_loop_count) + ')')
+            self.log.debug('WeatherUpload version ' + SCRIPT_VERSION +', skipping upload. (loop count is: ' + str(wu_loop_count) + ')')
 
-        if (wu_loop_count%wu_upload_frequency == 0):
+        if (wu_loop_count%wuconfig.stationdata['upload_frequency'] == 0):
             wu_loop_count = 0
         wu_loop_count = wu_loop_count + 1
 

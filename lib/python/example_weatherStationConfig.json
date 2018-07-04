@@ -1,0 +1,17 @@
+stationdata = {
+    "weather_upload": True,
+    "station_id": "XXXXXXXX",
+    "station_key": "xxxxxxxxx",
+    "upload_frequency": 5
+    }
+sensors = {
+    "tempc": 'An openHAB item name goes here',
+    "humidity": 'An openHAB item name goes here',
+    "pressurembar": 'An openHAB item name goes here',
+    //"soiltempc": 'An openHAB item name goes here', 
+    //"soilmoisture": 'An openHAB item name goes here',
+    "winddir": 'An openHAB item name goes here',
+    "windspeedms": 'An openHAB item name goes here',
+    "windgustms": 'An openHAB item name goes here',
+    "solarradiation": 'An openHAB item name goes here'
+    }

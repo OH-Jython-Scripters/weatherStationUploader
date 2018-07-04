@@ -27,7 +27,10 @@ OH-Jython-Scripters now has a Slack channel! It will help us to make sense of ou
 ## Installation
 After the prerequisits are met:
 * Register a new PWS (Personal Weather Station) at [Weather Underground](https://www.wunderground.com/personal-weather-station/signup). Note your station ID and station password.
-* Download [weatherStationUploader.py](https://raw.githubusercontent.com/OH-Jython-Scripters/weatherStationUploader/master/weatherStationUploader.py) and put it among your other jython scripts. Edit and save the file so it uses your own credentials and your own sensor names. Remove any sensors in the code that might be irrelevant for your site. Watch the debug output.
+
+* Download [lib/python/example_weatherStationConfig.json](https://raw.githubusercontent.com/OH-Jython-Scripters/weatherStationUploader/master/lib/python/example_weatherStationConfig.json), rename it and put in your python library search path. Typically the final name will be something like /etc/openhab2/automation/lib/python/weatherStationConfig.py
+Edit The configuration file to reflect your own credentials and your own sensor names. Remove any sensors in the code that might be irrelevant for your site.
+* Download [weatherStationUploader.py](https://raw.githubusercontent.com/OH-Jython-Scripters/weatherStationUploader/master/weatherStationUploader.py) and put it among your other jython scripts. Watch the debug output.
 
 
 ## Disclaimer
