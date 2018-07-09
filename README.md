@@ -12,9 +12,8 @@ This is a simple jsr223 jython script for openHAB to be used together with [Jyth
 OH-Jython-Scripters now has a Slack channel! It will help us to make sense of our work, and drive our efforts in Jython scripting forward. So if you are just curious, got questions, need support or just like to hang around, do not hesitate, join [**openHAB Jython Scripting on Slack**](https://join.slack.com/t/besynnerlig/shared_invite/enQtMzI3NzIyNTAzMjM1LTdmOGRhOTAwMmIwZWQ0MTNiZTU0MTY0MDk3OTVkYmYxYjE4NDE4MjcxMjg1YzAzNTJmZDM3NzJkYWU2ZDkwZmY) <--- Click link!
 
 #### Prerequisits
-* [openHAB](https://docs.openhab.org/index.html) version **2.2** or later
-* [Jython scripting for openHAB 2.x](https://github.com/OH-Jython-Scripters/openhab2-jython)
-* [The mylib openHAB jsr223 Jython helper library](https://github.com/OH-Jython-Scripters/mylib)
+* [openHAB](https://docs.openhab.org/index.html) version **2.3** or later
+* [lucid, openHAB 2.x jsr223 Jython helper library](https://github.com/OH-Jython-Scripters/lucid)
 * [meteocalc](https://github.com/OH-Jython-Scripters/weatherStationUploader/blob/master/README.md#about#meteocalc%20Installation)
 
 ## meteocalc Installation
@@ -28,8 +27,31 @@ OH-Jython-Scripters now has a Slack channel! It will help us to make sense of ou
 After the prerequisits are met:
 * Register a new PWS (Personal Weather Station) at [Weather Underground](https://www.wunderground.com/personal-weather-station/signup). Note your station ID and station password.
 
-* Download [lib/python/example_weatherStationConfig.json](https://raw.githubusercontent.com/OH-Jython-Scripters/weatherStationUploader/master/lib/python/example_weatherStationConfig.json), rename it and put in your python library search path. Typically the final name will be something like /etc/openhab2/automation/lib/python/weatherStationConfig.py
-Edit The configuration file to reflect your own credentials and your own sensor names. Remove any sensors in the code that might be irrelevant for your site.
+* Add the following Weather Underground configuration dictionary to the lucid configuration file:
+```
+# Weather Underground Config
+wunderground = {
+    'stationdata': {
+        "weather_upload": True,
+        "station_id": "XXXXXXXX",
+        "station_key": "xxxxxxxxxx",
+        "upload_frequency": 5
+    },
+    'sensors': {
+        "tempc": 'XXX',
+        "humidity": 'XXX',
+        "pressurembar": 'XXX',
+        "soiltempc": 'XXX',
+        "soilmoisture": 'XXX',
+        "winddir": 'XXX',
+        "windspeedms": 'XXX',
+        "windgustms": 'XXX',
+        "solarradiation": 'XXX'
+    }
+}
+```
+Edit the above to suit your needs. Save.
+
 * Download [weatherStationUploader.py](https://raw.githubusercontent.com/OH-Jython-Scripters/weatherStationUploader/master/weatherStationUploader.py) and put it among your other jython scripts. Watch the debug output.
 
 
