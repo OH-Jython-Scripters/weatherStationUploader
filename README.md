@@ -4,7 +4,7 @@ Share your openHAB weather sensors data with the world!  It’s fun, rewarding, 
 [![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 ## About
-This is a simple jsr223 jython script for openHAB to be used together with [Jython scripting for openHAB 2.x](https://github.com/OH-Jython-Scripters/openhab2-jython).
+This is a simple jsr223 jython script for openHAB to be used together with [lucid, openHAB 2.x jsr223 Jython helper library](https://github.com/OH-Jython-Scripters/lucid).
 
 **weatherStationUploader** enables personal weather station owners to UPLOAD weather data in real time to Weather Underground. All customization is made in the config file.
 
