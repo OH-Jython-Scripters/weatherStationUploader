@@ -147,7 +147,7 @@ class WeatherUpload(object):
 
             solarradiation = None
             if 'solarradiation' in config.wunderground['sensors']:
-                solarradiation = str(getItemValue(config.wunderground['sensors']['solarradiation'], 0))
+                solarradiation = str(lux_to_watts_m2(getItemValue(config.wunderground['sensors']['solarradiation'], 0)))
 
             # TODO:
             #windgustdir = 
