@@ -175,7 +175,7 @@ class WeatherUpload(object):
             if windspeedmph is not None: cmd += '--data-urlencode "windspeedmph='+windspeedmph+'" '
             if windgustmph is not None: cmd += '--data-urlencode "windgustmph='+windgustmph+'" '
             if solarradiation is not None: cmd += '--data-urlencode "solarradiation='+solarradiation+'" '
-            cmd += ' > /dev/null'
+            cmd += ' 1>/dev/null 2>&1 &'
 
             self.log.debug('WeatherUpload version ' + SCRIPT_VERSION +', performing an upload. (loop count is: ' + str(wu_loop_count) + ')')
             self.log.debug('cmd: ' + cmd)
