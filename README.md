@@ -1,4 +1,4 @@
-# weatherStationUploader
+# weatherStationUploader v2.0.0
 Share your openHAB weather sensors data with the world!  It’s fun, rewarding, and can help others planning out their day or weekend!
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)

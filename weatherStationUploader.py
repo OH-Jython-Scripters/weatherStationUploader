@@ -11,14 +11,11 @@ from org.joda.time.format import DateTimeFormat
 from meteocalc import Temp, dew_point, heat_index
 
 #from org.eclipse.smarthome.model.persistence.extensions import PersistenceExtensions
-from logging import DEBUG, INFO, WARNING, ERROR
 from lucid.rules import rule, addRule
 from lucid.triggers import CronTrigger
 
-from lucid.utils import getEvent, isActive, getItemValue, getLastUpdate
+from lucid.utils import isActive, getItemValue, getLastUpdate
 wu_loop_count = 1 # Loop counter
-
-import lucid.config as config
 
 @rule
 class WeatherUpload(object):
@@ -28,7 +25,7 @@ class WeatherUpload(object):
         ]
     def execute(self, modules, inputs):
 
-        SCRIPT_VERSION = '1.0'
+        SCRIPT_VERSION = '2.0'
         WU_URL = "http://weatherstation.wunderground.com/weatherstation/updateweatherstation.php"
 
         def ms_to_mph(input_speed):
@@ -81,7 +78,7 @@ class WeatherUpload(object):
             vn = - vn / len(u) # determine average north speed component
             uv = math.sqrt(ve * ve + vn * vn) # calculate wind speed vector magnitude
             # Calculate wind speed vector direction
-            vdir = math.atan2(ve, vn) # ORIGINALLY scipy.arctan2(ve, vn) # Funkar nog...
+            vdir = math.atan2(ve, vn) # ORIGINALLY scipy.arctan2(ve, vn) # Probably works...
             vdir = vdir * 180.0 / math.pi # Convert radians to degrees
             if vdir < 180:
                 Dv = vdir + 180.0
@@ -90,15 +87,14 @@ class WeatherUpload(object):
                     Dv = vdir - 180
                 else:
                     Dv = vdir
-            return uv, Dv # uv in m/s, Dv in dgerees from North
+            return uv, Dv # uv in m/s, Dv in degrees from North
 
 
-        self.log.setLevel(DEBUG)
-        event = getEvent(inputs)
+        #self.log.setLevel(DEBUG)
 
         global wu_loop_count
 
-        if (config.wunderground['stationdata']['weather_upload'] and wu_loop_count%config.wunderground['stationdata']['upload_frequency'] == 0):
+        if (self.config.wunderground['stationdata']['weather_upload'] and wu_loop_count%self.config.wunderground['stationdata']['upload_frequency'] == 0):
             self.log.info('Uploading data to Weather Underground')
 
             sdf = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss")
@@ -106,48 +102,48 @@ class WeatherUpload(object):
 
             temp = None
             tempf = None
-            if 'tempc' in config.wunderground['sensors']:
-                temp = Temp(getItemValue(config.wunderground['sensors']['tempc'], 0.0), 'c') # Outdoor temp, c - celsius, f - fahrenheit, k - kelvin
+            if 'tempc' in self.config.wunderground['sensors']:
+                temp = Temp(getItemValue(self.config.wunderground['sensors']['tempc'], 0.0), 'c') # Outdoor temp, c - celsius, f - fahrenheit, k - kelvin
                 tempf = str(round(temp.f, 1))
 
             soiltempf = None
-            if 'soiltempc' in config.wunderground['sensors']:
-                _temp = Temp(getItemValue(config.wunderground['sensors']['soiltempc'], 0.0), 'c') # Soil temp, c - celsius, f - fahrenheit, k - kelvin
+            if 'soiltempc' in self.config.wunderground['sensors']:
+                _temp = Temp(getItemValue(self.config.wunderground['sensors']['soiltempc'], 0.0), 'c') # Soil temp, c - celsius, f - fahrenheit, k - kelvin
                 soiltempf = str(round(_temp.f, 1))
 
             humidity = None
-            if 'humidity' in config.wunderground['sensors']:
-                humidity = getItemValue(config.wunderground['sensors']['humidity'], 0.0)
+            if 'humidity' in self.config.wunderground['sensors']:
+                humidity = getItemValue(self.config.wunderground['sensors']['humidity'], 0.0)
 
             dewptf = None
             heatidxf = None
-            if 'tempc' in config.wunderground['sensors'] and 'humidity' in config.wunderground['sensors']:
+            if 'tempc' in self.config.wunderground['sensors'] and 'humidity' in self.config.wunderground['sensors']:
                 dewptf = str(round(dew_point(temperature=temp, humidity=humidity).f, 1)) # calculate Dew Point
                 heatidxf = str(round(heat_index(temperature=temp, humidity=humidity).f, 1)) # calculate Heat Index
 
             pressure = None
-            if 'pressurembar' in config.wunderground['sensors']:
-                pressure = str(mbar_to_inches_mercury(getItemValue(config.wunderground['sensors']['pressurembar'], 0)))
+            if 'pressurembar' in self.config.wunderground['sensors']:
+                pressure = str(mbar_to_inches_mercury(getItemValue(self.config.wunderground['sensors']['pressurembar'], 0)))
 
             soilmoisture = None
-            if 'soilmoisture' in config.wunderground['sensors']:
-                soilmoisture = str(int(round(getItemValue(config.wunderground['sensors']['soilmoisture'], 0.0) * 100 / 1023)))
+            if 'soilmoisture' in self.config.wunderground['sensors']:
+                soilmoisture = str(int(round(getItemValue(self.config.wunderground['sensors']['soilmoisture'], 0.0) * 100 / 1023)))
 
             winddir = None
-            if 'winddir' in config.wunderground['sensors']:
-                winddir = str(getItemValue(config.wunderground['sensors']['winddir'], 0))
+            if 'winddir' in self.config.wunderground['sensors']:
+                winddir = str(getItemValue(self.config.wunderground['sensors']['winddir'], 0))
 
             windspeedmph = None
-            if 'windspeedms' in config.wunderground['sensors']:
-                windspeedmph = str(ms_to_mph(getItemValue(config.wunderground['sensors']['windspeedms'], 0.0)))
+            if 'windspeedms' in self.config.wunderground['sensors']:
+                windspeedmph = str(ms_to_mph(getItemValue(self.config.wunderground['sensors']['windspeedms'], 0.0)))
 
             windgustmph = None
-            if 'windgustms' in config.wunderground['sensors']:
-                windgustmph = str(ms_to_mph(getItemValue(config.wunderground['sensors']['windgustms'], 0.0)))
+            if 'windgustms' in self.config.wunderground['sensors']:
+                windgustmph = str(ms_to_mph(getItemValue(self.config.wunderground['sensors']['windgustms'], 0.0)))
 
             solarradiation = None
-            if 'solarradiation' in config.wunderground['sensors']:
-                solarradiation = str(lux_to_watts_m2(getItemValue(config.wunderground['sensors']['solarradiation'], 0)))
+            if 'solarradiation' in self.config.wunderground['sensors']:
+                solarradiation = str(lux_to_watts_m2(getItemValue(self.config.wunderground['sensors']['solarradiation'], 0)))
 
             # TODO:
             #windgustdir = 
@@ -160,8 +156,8 @@ class WeatherUpload(object):
 
             cmd = 'curl -s -G "' + WU_URL + '" ' \
                 + '--data-urlencode "action=updateraw" ' \
-                + '--data-urlencode "ID='+config.wunderground['stationdata']['station_id']+'" ' \
-                + '--data-urlencode "PASSWORD='+config.wunderground['stationdata']['station_key']+'" ' \
+                + '--data-urlencode "ID='+self.config.wunderground['stationdata']['station_id']+'" ' \
+                + '--data-urlencode "PASSWORD='+self.config.wunderground['stationdata']['station_key']+'" ' \
                 + '--data-urlencode "dateutc='+dateutc+'" ' \
                 + '--data-urlencode "softwaretype=openHAB" '
             if tempf is not None: cmd += '--data-urlencode "tempf='+tempf+'" '
@@ -184,7 +180,7 @@ class WeatherUpload(object):
         else:
             self.log.debug('WeatherUpload version ' + SCRIPT_VERSION +', skipping upload. (loop count is: ' + str(wu_loop_count) + ')')
 
-        if (wu_loop_count%config.wunderground['stationdata']['upload_frequency'] == 0):
+        if (wu_loop_count%self.config.wunderground['stationdata']['upload_frequency'] == 0):
             wu_loop_count = 0
         wu_loop_count = wu_loop_count + 1
 
