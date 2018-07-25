@@ -21,7 +21,7 @@ wu_loop_count = 1 # Loop counter
 class WeatherUpload(object):
     def getEventTriggers(self):
         return [
-            CronTrigger('0 0/1 * 1/1 * ? *'), # Runs every minute
+            CronTrigger(EVERY_MINUTE), # Runs every minute
         ]
     def execute(self, modules, inputs):
 
