@@ -1,4 +1,4 @@
-# weatherStationUploader v2.0.0
+# weatherStationUploader v2.1.0
 Share your openHAB weather sensors data with the world!  It’s fun, rewarding, and can help others planning out their day or weekend!
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
@@ -31,26 +31,34 @@ After the prerequisits are met:
 ```
 # Weather Underground Config
 wunderground = {
+    'logLevel': DEBUG,
     'stationdata': {
         "weather_upload": True,
-        "station_id": "XXXXXXXX",
-        "station_key": "xxxxxxxxxx",
+        "station_id": "XXXXXXXXXX",
+        "station_key": "XXXXXXXXXXXX",
         "upload_frequency": 5
     },
     'sensors': {
-        "tempc": 'XXX',
-        "humidity": 'XXX',
-        "pressurembar": 'XXX',
-        "soiltempc": 'XXX',
-        "soilmoisture": 'XXX',
-        "winddir": 'XXX',
-        "windspeedms": 'XXX',
-        "windgustms": 'XXX',
-        "solarradiation": 'XXX'
+        "tempc": None, # If the device is present, replace None with the name of your OH Item, e.g: "My_Sensor"
+        "humidity": None,
+        "pressurembar": None,
+        "rainhour": None,
+        "raintoday": None,
+        "soiltempc": None,
+        "soilmoisture": None,
+        "winddir": None,
+        "windspeedms": None,
+        "windgustms": None,
+        "windgustdir": None,
+        "winddir_avg2m": None,
+        "windspeedms_avg2m": None,
+        "windgustms_10m": None,
+        "windgustdir_10m": None,
+        "solarradiation": None,
     }
 }
 ```
-Edit the above to suit your needs. Save.
+Edit the above to suit your needs. Save it and reload OpenHAB. Make sure it doesn't generate any errors.
 
 * Download [weatherStationUploader.py](https://raw.githubusercontent.com/OH-Jython-Scripters/weatherStationUploader/master/weatherStationUploader.py) and put it among your other jython scripts. Watch the debug output.
 
