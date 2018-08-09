@@ -2,6 +2,8 @@ import os, time, math
 import org.joda.time.DateTime as DateTime
 import org.joda.time.DateTimeZone as DateTimeZone
 from org.joda.time.format import DateTimeFormat
+from org.eclipse.smarthome.model.persistence.extensions import PersistenceExtensions
+
 
 # This project on GitHUB: https://github.com/OH-Jython-Scripters/weatherStationUploader
 #
@@ -28,7 +30,7 @@ class WeatherUpload(object):
         ]
     def execute(self, modules, inputs):
 
-        SCRIPT_VERSION = '2.1'
+        SCRIPT_VERSION = '2.2'
         WU_URL = "http://weatherstation.wunderground.com/weatherstation/updateweatherstation.php"
 
         def ms_to_mph(input_speed):
@@ -49,89 +51,147 @@ class WeatherUpload(object):
             # return int(round(float(lux) * 0.01464128843))
             return int(round(float(lux) * 0.015454545))
 
+        def getTheSensor(lbl, never_assume_dead=False, getHighest=False):
+            # Each sensor entry in the configuration file can be a a single item name or a python list where you can
+            # define multiple sensor names. The first sensor in that list that has reported within the value set in
+            # sensor_dead_after_mins will be used. (Unless never_assume_dead is set to True)
+            # When "getHighest" argument is set to True, the sensor name with the highest value is picked.
+
+            def isSensorAlive(sName):
+                if getLastUpdate(PersistenceExtensions, ir.getItem(sName)).isAfter(DateTime.now().minusMinutes(sensor_dead_after_mins)):
+                    return True
+                else:
+                    self.log.warning('Sensor device ' + unicode(sName) + ' has not reported since: ' + str(getLastUpdate(PersistenceExtensions, ir.getItem(sName))))
+                    return False
+
+            sensorName = None
+            if lbl in self.config.wunderground['sensors'] and self.config.wunderground['sensors'][lbl] is not None:
+                tSens = self.config.wunderground['sensors'][lbl]
+                if isinstance(tSens, list):
+                    _highestValue = 0
+                    for s in tSens:
+                        if s is None:
+                            break
+                        # Get the first sensor that is not dead and find the sensor with the highest value if specified
+                        if never_assume_dead or isSensorAlive(s):
+                            if getHighest:
+                                _itemValue = getItemValue(s, 0)
+                                if _itemValue > _highestValue:
+                                    _highestValue = _itemValue
+                                    sensorName = s
+                            else:
+                                sensorName = s
+                                break
+                else:
+                    if never_assume_dead or isSensorAlive(tSens):
+                        sensorName = tSens
+
+            if sensorName is not None:
+                self.log.debug("Device used for " + unicode(lbl) + ": " + sensorName)
+            return sensorName
+
         self.log.setLevel(self.config.wunderground['logLevel'])
 
         global wu_loop_count
-
-        if (self.config.wunderground['stationdata']['weather_upload'] and wu_loop_count%self.config.wunderground['stationdata']['upload_frequency'] == 0):
-            self.log.debug('Uploading data to Weather Underground')
+        sensor_dead_after_mins = self.config.wunderground['sensor_dead_after_mins'] # The time after which a sensor is presumed to be dead
+        if (not self.config.wunderground['stationdata']['weather_upload']) \
+        or (self.config.wunderground['stationdata']['weather_upload'] and wu_loop_count%self.config.wunderground['stationdata']['upload_frequency'] == 0):
+            if self.config.wunderground['stationdata']['weather_upload']:
+                self.log.debug('Uploading data to Weather Underground')
+            else:
+                self.log.debug('No data to will be upladed to Weather Underground')
 
             sdf = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss")
             dateutc = sdf.print(DateTime.now((DateTimeZone.UTC)))
 
-            temp = None
             tempf = None
-            if 'tempc' in self.config.wunderground['sensors'] and self.config.wunderground['sensors']['tempc'] is not None:
-                temp = Temp(getItemValue(self.config.wunderground['sensors']['tempc'], 0.0), 'c') # Outdoor temp, c - celsius, f - fahrenheit, k - kelvin
+            temp = None
+            sensorName = getTheSensor('tempc')
+            if sensorName is not None:
+                temp = Temp(getItemValue(sensorName, 0.0), 'c') # Outdoor temp, c - celsius, f - fahrenheit, k - kelvin
                 tempf = str(round(temp.f, 1))
 
             soiltempf = None
-            if 'soiltempc' in self.config.wunderground['sensors'] and self.config.wunderground['sensors']['soiltempc'] is not None:
-                _temp = Temp(getItemValue(self.config.wunderground['sensors']['soiltempc'], 0.0), 'c') # Soil temp, c - celsius, f - fahrenheit, k - kelvin
+            sensorName = getTheSensor('soiltempc')
+            if sensorName is not None:
+                _temp = Temp(getItemValue(sensorName, 0.0), 'c') # Soil temp, c - celsius, f - fahrenheit, k - kelvin
                 soiltempf = str(round(_temp.f, 1))
 
             humidity = None
-            if 'humidity' in self.config.wunderground['sensors'] and self.config.wunderground['sensors']['humidity'] is not None:
-                humidity = getItemValue(self.config.wunderground['sensors']['humidity'], 0.0)
+            sensorName = getTheSensor('humidity')
+            if sensorName is not None:
+                humidity = getItemValue(sensorName, 0.0)
 
             dewptf = None
             heatidxf = None
-            if 'tempc' in self.config.wunderground['sensors'] and 'humidity' in self.config.wunderground['sensors'] \
-            and self.config.wunderground['sensors']['tempc'] is not None and self.config.wunderground['sensors']['humidity'] is not None:
+            if humidity is not None and temp is not None:
                 dewptf = str(round(dew_point(temperature=temp, humidity=humidity).f, 1)) # calculate Dew Point
                 heatidxf = str(round(heat_index(temperature=temp, humidity=humidity).f, 1)) # calculate Heat Index
 
             pressure = None
-            if 'pressurembar' in self.config.wunderground['sensors'] and self.config.wunderground['sensors']['pressurembar'] is not None:
-                pressure = str(mbar_to_inches_mercury(getItemValue(self.config.wunderground['sensors']['pressurembar'], 0)))
+            sensorName = getTheSensor('pressurembar')
+            if sensorName is not None:
+                pressure = str(mbar_to_inches_mercury(getItemValue(sensorName, 0)))
 
             rainin = None
-            if 'rainhour' in self.config.wunderground['sensors'] and self.config.wunderground['sensors']['rainhour'] is not None:
-                rainin = str(mm_to_inch(getItemValue(self.config.wunderground['sensors']['rainhour'], 0.0)))
+            sensorName = getTheSensor('rainhour', never_assume_dead=True)
+            if sensorName is not None:
+                rainin = str(mm_to_inch(getItemValue(sensorName, 0.0)))
 
             dailyrainin = None
-            if 'raintoday' in self.config.wunderground['sensors'] and self.config.wunderground['sensors']['raintoday'] is not None:
-                dailyrainin = str(mm_to_inch(getItemValue(self.config.wunderground['sensors']['raintoday'], 0.0)))
+            sensorName = getTheSensor('raintoday', never_assume_dead=True)
+            if sensorName is not None:
+                dailyrainin = str(mm_to_inch(getItemValue(sensorName, 0.0)))
 
             soilmoisture = None
-            if 'soilmoisture' in self.config.wunderground['sensors'] and self.config.wunderground['sensors']['soilmoisture'] is not None:
-                soilmoisture = str(int(round(getItemValue(self.config.wunderground['sensors']['soilmoisture'], 0.0) * 100 / 1023)))
+            sensorName = getTheSensor('soilmoisture')
+            if sensorName is not None:
+                soilmoisture = str(int(round(getItemValue(sensorName, 0.0) * 100 / 1023)))
 
             winddir = None
-            if 'winddir' in self.config.wunderground['sensors'] and self.config.wunderground['sensors']['winddir'] is not None:
-                winddir = str(getItemValue(self.config.wunderground['sensors']['winddir'], 0))
+            sensorName = getTheSensor('winddir')
+            if sensorName is not None:
+                winddir = str(getItemValue(sensorName, 0))
 
             windspeedmph = None
-            if 'windspeedms' in self.config.wunderground['sensors'] and self.config.wunderground['sensors']['windspeedms'] is not None:
-                windspeedmph = str(ms_to_mph(getItemValue(self.config.wunderground['sensors']['windspeedms'], 0.0)))
+            sensorName = getTheSensor('windspeedms')
+            if sensorName is not None:
+                windspeedmph = str(ms_to_mph(getItemValue(sensorName, 0.0)))
 
             windgustmph = None
-            if 'windgustms' in self.config.wunderground['sensors'] and self.config.wunderground['sensors']['windgustms'] is not None:
-                windgustmph = str(ms_to_mph(getItemValue(self.config.wunderground['sensors']['windgustms'], 0.0)))
+            sensorName = getTheSensor('windgustms')
+            if sensorName is not None:
+                windgustmph = str(ms_to_mph(getItemValue(sensorName, 0.0)))
 
             windgustdir = None
-            if 'windgustdir' in self.config.wunderground['sensors'] and self.config.wunderground['sensors']['windgustdir'] is not None:
-                windgustdir = str(getItemValue(self.config.wunderground['sensors']['windgustdir'], 0))
+            sensorName = getTheSensor('windgustdir')
+            if sensorName is not None:
+                windgustdir = str(getItemValue(sensorName, 0))
 
             windspdmph_avg2m = None
-            if 'windspeedms_avg2m' in self.config.wunderground['sensors'] and self.config.wunderground['sensors']['windspeedms_avg2m'] is not None:
-                windspdmph_avg2m = str(ms_to_mph(getItemValue(self.config.wunderground['sensors']['windspeedms_avg2m'], 0.0)))
+            sensorName = getTheSensor('windspeedms_avg2m')
+            if sensorName is not None:
+                windspdmph_avg2m = str(ms_to_mph(getItemValue(sensorName, 0.0)))
 
             winddir_avg2m = None
-            if 'winddir_avg2m' in self.config.wunderground['sensors'] and self.config.wunderground['sensors']['winddir_avg2m'] is not None:
-                winddir_avg2m = str(getItemValue(self.config.wunderground['sensors']['winddir_avg2m'], 0))
+            sensorName = getTheSensor('winddir_avg2m')
+            if sensorName is not None:
+                winddir_avg2m = str(getItemValue(sensorName, 0))
 
             windgustmph_10m = None
-            if 'windgustms_10m' in self.config.wunderground['sensors'] and self.config.wunderground['sensors']['windgustms_10m'] is not None:
-                windgustmph_10m = str(ms_to_mph(getItemValue(self.config.wunderground['sensors']['windgustms_10m'], 0.0)))
+            sensorName = getTheSensor('windgustms_10m')
+            if sensorName is not None:
+                windgustmph_10m = str(ms_to_mph(getItemValue(sensorName, 0.0)))
 
             windgustdir_10m = None
-            if 'windgustdir_10m' in self.config.wunderground['sensors'] and self.config.wunderground['sensors']['windgustdir_10m'] is not None:
-                windgustdir_10m = str(getItemValue(self.config.wunderground['sensors']['windgustdir_10m'], 0))
+            sensorName = getTheSensor('windgustdir_10m')
+            if sensorName is not None:
+                windgustdir_10m = str(getItemValue(sensorName, 0))
 
             solarradiation = None
-            if 'solarradiation' in self.config.wunderground['sensors'] and self.config.wunderground['sensors']['solarradiation'] is not None:
-                solarradiation = str(lux_to_watts_m2(getItemValue(self.config.wunderground['sensors']['solarradiation'], 0)))
+            sensorName = getTheSensor('solarradiation', getHighest=True)
+            if sensorName is not None:
+                solarradiation = str(lux_to_watts_m2(getItemValue(sensorName, 0)))
 
             # From http://wiki.wunderground.com/index.php/PWS_-_Upload_Protocol
 
@@ -142,7 +202,12 @@ class WeatherUpload(object):
                 + '--data-urlencode "dateutc='+dateutc+'" ' \
                 + '--data-urlencode "softwaretype=openHAB" '
             self.log.debug("")
-            self.log.debug("Below are the weather data that we will send:")
+
+            if self.config.wunderground['stationdata']['weather_upload']:
+                self.log.debug("Below is the weather data that we will send:")
+            else:
+                self.log.debug("Below is the weather data that we would send (if weather_upload was enabled):")
+
             if tempf is not None:
                 cmd += '--data-urlencode "tempf='+tempf+'" '
                 self.log.debug("tempf: "+tempf)
@@ -199,10 +264,11 @@ class WeatherUpload(object):
                 self.log.debug("solarradiation: "+solarradiation)
             cmd += ' 1>/dev/null 2>&1 &'
             self.log.debug("")
-            self.log.debug('WeatherUpload version ' + SCRIPT_VERSION +', performing an upload. (loop count is: ' + str(wu_loop_count) + ')')
-            self.log.debug('cmd: ' + cmd)
 
-            os.system(cmd)
+            if self.config.wunderground['stationdata']['weather_upload']:
+                self.log.debug('WeatherUpload version ' + SCRIPT_VERSION +', performing an upload. (loop count is: ' + str(wu_loop_count) + ')')
+                self.log.debug('cmd: ' + cmd)
+                os.system(cmd)
         else:
             self.log.debug('WeatherUpload version ' + SCRIPT_VERSION +', skipping upload. (loop count is: ' + str(wu_loop_count) + ')')
 
