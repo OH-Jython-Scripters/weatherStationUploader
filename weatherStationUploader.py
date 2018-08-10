@@ -51,11 +51,12 @@ class WeatherUpload(object):
             # return int(round(float(lux) * 0.01464128843))
             return int(round(float(lux) * 0.015454545))
 
-        def getTheSensor(lbl, never_assume_dead=False, getHighest=False):
+        def getTheSensor(lbl, never_assume_dead=False, getHighest=False, getLowest=False):
             # Each sensor entry in the configuration file can be a a single item name or a python list where you can
             # define multiple sensor names. The first sensor in that list that has reported within the value set in
             # sensor_dead_after_mins will be used. (Unless never_assume_dead is set to True)
             # When "getHighest" argument is set to True, the sensor name with the highest value is picked.
+            # When "getlowest" argument is set to True, the sensor name with the lowest value is picked.
 
             def isSensorAlive(sName):
                 if getLastUpdate(PersistenceExtensions, ir.getItem(sName)).isAfter(DateTime.now().minusMinutes(sensor_dead_after_mins)):
@@ -69,15 +70,21 @@ class WeatherUpload(object):
                 tSens = self.config.wunderground['sensors'][lbl]
                 if isinstance(tSens, list):
                     _highestValue = 0
+                    _lowestValue = 999999999
                     for s in tSens:
                         if s is None:
                             break
-                        # Get the first sensor that is not dead and find the sensor with the highest value if specified
+                        # Get the first sensor that is not dead and find the sensor with the highest or the lowest value if requested
                         if never_assume_dead or isSensorAlive(s):
                             if getHighest:
                                 _itemValue = getItemValue(s, 0)
                                 if _itemValue > _highestValue:
                                     _highestValue = _itemValue
+                                    sensorName = s
+                            elif getLowest:
+                                _itemValue = getItemValue(s, 0)
+                                if _itemValue < _lowestValue:
+                                    _lowestValue = _itemValue
                                     sensorName = s
                             else:
                                 sensorName = s
@@ -106,7 +113,7 @@ class WeatherUpload(object):
 
             tempf = None
             temp = None
-            sensorName = getTheSensor('tempc')
+            sensorName = getTheSensor('tempc', getLowest=True)
             if sensorName is not None:
                 temp = Temp(getItemValue(sensorName, 0.0), 'c') # Outdoor temp, c - celsius, f - fahrenheit, k - kelvin
                 tempf = str(round(temp.f, 1))
