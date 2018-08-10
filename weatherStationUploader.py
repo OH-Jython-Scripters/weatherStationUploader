@@ -30,7 +30,7 @@ class WeatherUpload(object):
         ]
     def execute(self, modules, inputs):
 
-        SCRIPT_VERSION = '2.2'
+        SCRIPT_VERSION = '2.3'
         WU_URL = "http://weatherstation.wunderground.com/weatherstation/updateweatherstation.php"
 
         def ms_to_mph(input_speed):
