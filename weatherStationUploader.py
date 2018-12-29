@@ -30,7 +30,7 @@ class WeatherUpload(object):
         ]
     def execute(self, modules, inputs):
 
-        SCRIPT_VERSION = '2.3'
+        SCRIPT_VERSION = '2.3.1'
         WU_URL = "http://weatherstation.wunderground.com/weatherstation/updateweatherstation.php"
 
         def ms_to_mph(input_speed):
@@ -138,7 +138,9 @@ class WeatherUpload(object):
             pressure = None
             sensorName = getTheSensor('pressurembar')
             if sensorName is not None:
-                pressure = str(mbar_to_inches_mercury(getItemValue(sensorName, 0)))
+                _mbar = getItemValue(sensorName, 0)
+                if ((_mbar < 1070) and (_mbar > 920)): 
+                    pressure = str(mbar_to_inches_mercury(_mbar))
 
             rainin = None
             sensorName = getTheSensor('rainhour', never_assume_dead=True)
