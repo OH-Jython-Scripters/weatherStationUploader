@@ -1,6 +1,10 @@
 # weatherStationUploader v2.1.0
 Share your openHAB weather sensors data with the world!  It’s fun, rewarding, and can help others planning out their day or weekend!
 
+# Deprecated project
+
+This project is no longer supported, please consider using [openhab2-jython](https://github.com/OH-Jython-Scripters/openhab2-jython) instead.
+
 [![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 ## About
